@@ -323,7 +323,7 @@ void do_bgfg(char **argv){
         // Return
         return;
     }
-    // Handle job ID or process ID
+    // Handle job ID
     else if(argv[1][0] == '%'){
         // Parse job
         int job_arg = (int) strtol(argv[1] + 1, NULL, 10);
@@ -349,7 +349,9 @@ void do_bgfg(char **argv){
             return;
         }
     }
+    // Handle process ID
     else{
+        // Parse process
         int process = (int) strtol(argv[1], NULL, 10);
 
         // If argument is not in valid form
@@ -357,7 +359,7 @@ void do_bgfg(char **argv){
             // Print error
             printf("Error: Invalid arg\n");
 
-            // return
+            // Return
             return;
         }
 
@@ -369,7 +371,7 @@ void do_bgfg(char **argv){
             // Print error
             printf("Error: Invalid process\n");
 
-            // return
+            // Return
             return;
         }
     }
@@ -378,7 +380,7 @@ void do_bgfg(char **argv){
     kill(-(job->pid), SIGCONT);
 
     // Handle fg and bg commands
-    if(!strcmp(argv[0],"fg")){
+    if(!strcmp(argv[0], "fg")){
         // Change state to foreground
         job->state = FG;
 
@@ -396,40 +398,6 @@ void do_bgfg(char **argv){
 
 // Block until process pid is no longer the foreground process
 void waitfg(pid_t pid) {
-//    // Initialize status variable
-//    int stat_loc;
-//
-//    // Wait for the process
-//    waitpid(pid, &stat_loc, WUNTRACED);
-//
-//    // Get the job for this process
-//    struct job_t *process_job = getjobpid(jobs, pid);
-//
-//    // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
-//    if(WIFSIGNALED(stat_loc) || WIFEXITED(stat_loc)){
-//        // Delete the job
-//        deletejob(jobs, pid);
-//    }
-//    // If the process has not terminated, but has stopped and can be restarted
-//    else if (WIFSTOPPED(stat_loc)) {
-//        printf("%d stopped\n", process_job->jid);
-//        process_job->state = ST;
-//    }
-//
-//    // Return
-//    return;
-
-//    // Job for this process
-//    struct job_t *process_job = getjobpid(jobs, pid);
-//
-//    // Wait while foreground
-//    while((process_job != NULL) && (process_job->state == FG)){
-//        sleep(1);
-//    }
-
-//    // return
-//    return;
-
     // Initialize status variable
     int stat_loc;
 
@@ -470,14 +438,12 @@ void sigchld_handler(int sig){
         if (WIFSTOPPED(stat_loc)) {
             // Change job's state to stopped
             process_job->state = ST;
-            printf("REAPING WHILE LOOP - WIFSTOPPED");
         }
-            // Terminated
+         // Terminated
         else {
             // Delete job for this process
             deletejob(jobs, process);
-            printf("REAPING WHILE LOOP - ELSE");
-            }
+        }
     }
 
 
