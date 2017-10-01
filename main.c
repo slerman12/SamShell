@@ -135,6 +135,8 @@ void eval(char *cmdline){
     // Mask set to block signals in case of race conditions
     sigset_t mask;
 
+    // TODO: Parse piped commands
+
     // Array to store parsed arguments
     char* argv[MAXARGS];
 
@@ -167,38 +169,76 @@ void eval(char *cmdline){
         // Initialize process ID
         int pid;
 
-        // Fork a new child process
-        switch (pid = fork()){
-            // If child
-            case 0:
-                // Unblock signals
-                sigprocmask(SIG_UNBLOCK, &mask, NULL) ;
+        // Number of pipes
+        int pipe_count = 1;
 
-                // Set process group
-                setpgid(0, 0);
+        // Pipe iterator
+        int i;
 
-                // Execute the command
-                execvp(argv[0], argv);
+        // File descriptors
+        int fildes[2];
 
-                // Print error message if the command is not known
-                printf("Error: Unknown command %s\n", argv[0]);
+        // Read in
+        int read = 0;
 
-                // Exit child process if command is unknown
-                exit(0);
-            // If error
-            case -1:
-                // Print error message
-                printf("Error: Could not fork a new process\n");
+        // Loop through piped commands
+        for (i = 0; i < pipe_count; i++) {
+            // Create pipe
+            pipe(fildes);
 
-                // Break
-                break;
-            // Default
-            default:
-                // Set process group (to be safe)
-                setpgid(pid, pid);
+            // Fork a new child process
+            switch (pid = fork()) {
+                // If child
+                case 0:
+                    // Unblock signals
+                    sigprocmask(SIG_UNBLOCK, &mask, NULL);
 
-                // Break
-                break;
+                    // Set process group
+                    setpgid(0, 0);
+
+                    // Read file descriptor
+                    if (read){
+                        dup2(read, 0);
+                        close(read);
+                    }
+
+                    // Output write
+                    if ((i < pipe_count - 1) && (fildes[1] != 1)){
+                        dup2(fildes[1], 1);
+                        close(fildes[1]);
+                    }
+
+                    // Execute the command TODO: execute ith command
+                    execvp(argv[0], argv);
+
+                    // Print error message if the command is not known
+                    printf("Error: Unknown command %s\n", argv[0]);
+
+                    // Exit child process if command is unknown
+                    exit(0);
+                    // If error
+                case -1:
+                    // Print error message
+                    printf("Error: Could not fork a new process\n");
+
+                    // Break
+                    break;
+                    // Default
+                default:
+                    // Set process group for parent (to be safe)
+                    setpgid(pid, pid);
+
+                    // Break
+                    break;
+            }
+
+            /* No need for the write end of the pipe, the child will write here.  */
+            close (fildes[1]);
+
+            /* Keep the read end of the pipe, the next child will read from there.  */
+            if (i < pipe_count - 1){
+                read = fildes[0];
+            }
         }
 
         // Add the new job to job list, and if foreground then wait for process
@@ -219,6 +259,8 @@ void eval(char *cmdline){
             // Wait for foreground process
             waitfg(pid);
         }
+
+
     }
 
     // Return
@@ -379,7 +421,7 @@ void do_bgfg(char **argv){
     // Continue the execution (in case of stop)
     kill(-(job->pid), SIGCONT);
 
-    // Handle fg and bg commands
+    // Foreground state change
     if(!strcmp(argv[0], "fg")){
         // Change state to foreground
         job->state = FG;
@@ -387,6 +429,7 @@ void do_bgfg(char **argv){
         // Wait on foreground process
         waitfg(job->pid);
     }
+    // Background state change
     else{
         // Change state to background
         job->state = BG;
@@ -409,12 +452,13 @@ void waitfg(pid_t pid) {
 
     // If the process has not terminated, but has stopped and can be restarted
     if (WIFSTOPPED(stat_loc)) {
+        // Change job's state to stopped
         process_job->state = ST;
     }
     // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
     else if(WIFSIGNALED(stat_loc) || WIFEXITED(stat_loc)){
-            // Delete the job
-            deletejob(jobs, pid);
+        // Delete the job
+        deletejob(jobs, pid);
     }
 
     // Return
@@ -434,18 +478,17 @@ void sigchld_handler(int sig){
         // Job for this process
         struct job_t *process_job = getjobpid(jobs, process);
 
-        // If stopped
+        // If the process has not terminated, but has stopped and can be restarted
         if (WIFSTOPPED(stat_loc)) {
             // Change job's state to stopped
             process_job->state = ST;
         }
-         // Terminated
-        else {
-            // Delete job for this process
+            // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
+        else if(WIFSIGNALED(stat_loc) || WIFEXITED(stat_loc)){
+            // Delete the job
             deletejob(jobs, process);
         }
     }
-
 
     // Return
     return;
@@ -632,11 +675,14 @@ void listjobs(struct job_t *jobs){
     // For all jobs
     for (i = 0; i < MAXJOBS; i++){
         // If valid background job
-        if ((jobs[i].pid != 0) && (jobs[i].state == BG)){
+        if ((jobs[i].pid) && (jobs[i].state == BG)){
             // Print job id and command
             printf("%d: %s", jobs[i].jid, jobs[i].cmdline);
         }
     }
+
+    // Return
+    return;
 }
 
 // Print a help message
