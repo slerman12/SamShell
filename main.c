@@ -20,11 +20,9 @@
 #define ST 3    /* stopped */
 
 // Global variables
-extern char **environ;      /* defined in libc */
 char prompt[] = "SamShell> ";    /* command line prompt */
 int verbose = 0;            /* if true, print additional output */
 int nextjid = 1;            /* next job ID to allocate */
-char sbuf[MAXLINE];         /* for composing sprintf messages */
 
 struct job_t{              /* The job struct */
     pid_t pid;              /* job PID */
@@ -56,7 +54,6 @@ int deletejob(struct job_t *jobs, pid_t pid);
 pid_t fgpid(struct job_t *jobs);
 struct job_t *getjobpid(struct job_t *jobs, pid_t pid);
 struct job_t *getjobjid(struct job_t *jobs, int jid);
-int pid2jid(pid_t pid);
 void listjobs(struct job_t *jobs);
 
 void usage(void);
@@ -224,7 +221,7 @@ void eval(char *cmdline){
                         close(fildes[1]);
                     }
 
-                    // Execute the command TODO: execute ith command
+                    // Execute the command
                     execvp(argv[0], argv);
 
                     // Print error message if the command is not known
@@ -667,19 +664,6 @@ struct job_t *getjobjid(struct job_t *jobs, int jid){
         if (jobs[i].jid == jid)
             return &jobs[i];
     return NULL;
-}
-
-// Map process ID to job ID
-int pid2jid(pid_t pid){
-    int i;
-
-    if (pid < 1)
-        return 0;
-    for (i = 0; i < MAXJOBS; i++)
-        if (jobs[i].pid == pid){
-            return jobs[i].jid;
-        }
-    return 0;
 }
 
 // Print the job list
