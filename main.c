@@ -81,11 +81,11 @@ int main(int argc, char **argv){
             case 'h':
                 usage();
                 break;
-            // Emit additional diagnostic info
+                // Emit additional diagnostic info
             case 'v':
                 verbose = 1;
                 break;
-            // Don't print a prompt
+                // Don't print a prompt
             case 'p':
                 // Handy for automatic testing
                 emit_prompt = 0;
@@ -135,25 +135,23 @@ void eval(char *cmdline){
     // Mask set to block signals in case of race conditions
     sigset_t mask;
 
-    // TODO: Parse piped commands
+    // Array to store parsed arguments for built-in commands
+    char* argv_no_pipes[MAXARGS];
 
-    // Array to store parsed arguments
-    char* argv[MAXARGS];
-
-    // Parse arguments into argv array, and store boolean for if the command is to be run in the background
-    int is_background = parseline(cmdline, argv);
+    // Parse arguments into argv_no_pipes array, and store boolean for if the command is to be run in the background
+    int is_background = parseline(cmdline, argv_no_pipes);
 
     // Error checking
-    if(argv[0] == NULL){
+    if(argv_no_pipes[0] == NULL){
         // Print error message if the command is not known
-        printf("Error: Unknown command %s\n", argv[0]);
+        printf("Error: Unknown command %s\n", argv_no_pipes[0]);
 
         // Return
         return;
     }
-    
-    // Handle built-in command, and store boolean for if the command is a built-in command 
-    int is_built_in = builtin_cmd(argv);
+
+    // Handle built-in command, and store boolean for if the command is a built-in command
+    int is_built_in = builtin_cmd(argv_no_pipes);
 
     // Handle any (non built-in) command
     if(!is_built_in){
@@ -169,20 +167,38 @@ void eval(char *cmdline){
         // Initialize process ID
         int pid;
 
-        // Number of pipes
-        int pipe_count = 1;
-
-        // Pipe iterator
-        int i;
-
         // File descriptors
         int fildes[2];
 
         // Read in
         int read = 0;
 
+        // Symbol for deliminating piped commands
+        const char pipe_symbol[2] = "|";
+
+        // Set the individual command in a pipe chain
+        char *pipe_cmd = strtok(cmdline, pipe_symbol);
+
         // Loop through piped commands
-        for (i = 0; i < pipe_count; i++) {
+        while(pipe_cmd != NULL) {
+            // Array to store parsed arguments
+            char* argv[MAXARGS];
+
+            // Parse arguments into argv array, and store boolean for if the command is to be run in the background
+            is_background = parseline(pipe_cmd, argv);
+
+            // Error checking
+            if(argv[0] == NULL){
+                // Print error message if the command is not known
+                printf("Error: Unknown command %s\n", argv[0]);
+
+                // Return
+                return;
+            }
+
+            // Iterate to next piped command string
+            pipe_cmd = strtok(NULL, pipe_symbol);
+
             // Create pipe
             pipe(fildes);
 
@@ -197,13 +213,13 @@ void eval(char *cmdline){
                     setpgid(0, 0);
 
                     // Read file descriptor
-                    if (read){
+                    if (read) {
                         dup2(read, 0);
                         close(read);
                     }
 
                     // Output write
-                    if ((i < pipe_count - 1) && (fildes[1] != 1)){
+                    if ((pipe_cmd != NULL) && (fildes[1] != 1)) {
                         dup2(fildes[1], 1);
                         close(fildes[1]);
                     }
@@ -232,11 +248,12 @@ void eval(char *cmdline){
                     break;
             }
 
-            /* No need for the write end of the pipe, the child will write here.  */
-            close (fildes[1]);
+            // Close pipe write
+            close(fildes[1]);
 
-            /* Keep the read end of the pipe, the next child will read from there.  */
-            if (i < pipe_count - 1){
+            // If not final command in pipe chain
+            if (pipe_cmd != NULL) {
+                // Set read input
                 read = fildes[0];
             }
         }
@@ -259,8 +276,6 @@ void eval(char *cmdline){
             // Wait for foreground process
             waitfg(pid);
         }
-
-
     }
 
     // Return
@@ -365,7 +380,7 @@ void do_bgfg(char **argv){
         // Return
         return;
     }
-    // Handle job ID
+        // Handle job ID
     else if(argv[1][0] == '%'){
         // Parse job
         int job_arg = (int) strtol(argv[1] + 1, NULL, 10);
@@ -391,7 +406,7 @@ void do_bgfg(char **argv){
             return;
         }
     }
-    // Handle process ID
+        // Handle process ID
     else{
         // Parse process
         int process = (int) strtol(argv[1], NULL, 10);
@@ -429,7 +444,7 @@ void do_bgfg(char **argv){
         // Wait on foreground process
         waitfg(job->pid);
     }
-    // Background state change
+        // Background state change
     else{
         // Change state to background
         job->state = BG;
@@ -455,7 +470,7 @@ void waitfg(pid_t pid) {
         // Change job's state to stopped
         process_job->state = ST;
     }
-    // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
+        // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
     else if(WIFSIGNALED(stat_loc) || WIFEXITED(stat_loc)){
         // Delete the job
         deletejob(jobs, pid);
