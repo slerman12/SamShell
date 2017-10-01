@@ -78,11 +78,11 @@ int main(int argc, char **argv){
             case 'h':
                 usage();
                 break;
-                // Emit additional diagnostic info
+            // Emit additional diagnostic info
             case 'v':
                 verbose = 1;
                 break;
-                // Don't print a prompt
+            // Don't print a prompt
             case 'p':
                 // Handy for automatic testing
                 emit_prompt = 0;
@@ -229,14 +229,14 @@ void eval(char *cmdline){
 
                     // Exit child process if command is unknown
                     exit(0);
-                    // If error
+                // If error
                 case -1:
                     // Print error message
                     printf("Error: Could not fork a new process\n");
 
                     // Break
                     break;
-                    // Default
+                // Default
                 default:
                     // Set process group for parent (to be safe)
                     setpgid(pid, pid);
@@ -360,6 +360,7 @@ int builtin_cmd(char **argv){
         // Built-in command
         return 1;
     }
+
     // Not a built-in command
     return 0;
 }
@@ -377,7 +378,7 @@ void do_bgfg(char **argv){
         // Return
         return;
     }
-        // Handle job ID
+    // Handle job ID
     else if(argv[1][0] == '%'){
         // Parse job
         int job_arg = (int) strtol(argv[1] + 1, NULL, 10);
@@ -403,7 +404,7 @@ void do_bgfg(char **argv){
             return;
         }
     }
-        // Handle process ID
+    // Handle process ID
     else{
         // Parse process
         int process = (int) strtol(argv[1], NULL, 10);
@@ -441,7 +442,7 @@ void do_bgfg(char **argv){
         // Wait on foreground process
         waitfg(job->pid);
     }
-        // Background state change
+    // Background state change
     else{
         // Change state to background
         job->state = BG;
@@ -467,7 +468,7 @@ void waitfg(pid_t pid) {
         // Change job's state to stopped
         process_job->state = ST;
     }
-        // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
+    // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
     else if(WIFSIGNALED(stat_loc) || WIFEXITED(stat_loc)){
         // Delete the job
         deletejob(jobs, pid);
@@ -495,7 +496,7 @@ void sigchld_handler(int sig){
             // Change job's state to stopped
             process_job->state = ST;
         }
-            // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
+        // If the process terminated due to receipt of a signal or by a call to exit(2) or exit(3)
         else if(WIFSIGNALED(stat_loc) || WIFEXITED(stat_loc)){
             // Delete the job
             deletejob(jobs, process);
