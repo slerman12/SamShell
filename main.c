@@ -274,9 +274,6 @@ void eval(char *cmdline){
             waitfg(pid);
         }
     }
-
-    // Return
-    return;
 }
 
 // Parse the command line and build the argv array
@@ -360,9 +357,10 @@ int builtin_cmd(char **argv){
         // Built-in command
         return 1;
     }
-
-    // Not a built-in command
-    return 0;
+    else {
+        // Not a built-in command
+        return 0;
+    }
 }
 
 // Execution of background and foreground commands
@@ -447,9 +445,6 @@ void do_bgfg(char **argv){
         // Change state to background
         job->state = BG;
     }
-
-    // Return
-    return;
 }
 
 // Block until process pid is no longer the foreground process
@@ -473,9 +468,6 @@ void waitfg(pid_t pid) {
         // Delete the job
         deletejob(jobs, pid);
     }
-
-    // Return
-    return;
 }
 
 // Kernel sends a SIGCHLD when a child job terminates (becomes a zombie), or stops, then reaps zombie children
@@ -502,9 +494,6 @@ void sigchld_handler(int sig){
             deletejob(jobs, process);
         }
     }
-
-    // Return
-    return;
 }
 
 // Use ctrl-C to send an interrupt to the foreground job
@@ -531,9 +520,6 @@ void sigint_handler(int sig){
         printf("%s", prompt);
         fflush(stdout);
     }
-
-    // Return
-    return;
 }
 
 // Use ctrl-Z to suspend the foreground job by sending it a SIGTSTP.
@@ -560,9 +546,6 @@ void sigtstp_handler(int sig){
         printf("%s", prompt);
         fflush(stdout);
     }
-
-    // Return
-    return;
 }
 
 // Clear the entries in a job struct
@@ -680,9 +663,6 @@ void listjobs(struct job_t *jobs){
             printf("%d: %s", jobs[i].jid, jobs[i].cmdline);
         }
     }
-
-    // Return
-    return;
 }
 
 // Print a help message
